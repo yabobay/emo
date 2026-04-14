@@ -25,6 +25,7 @@ int load_image(image *img, const char *filename) {
     strcpy((*img)->img_info->filename, filename);
     (*img)->img = ReadImage((*img)->img_info, e);
     CatchException(e);
+    return 0;
 }
 
 void unload_image(image *img) {

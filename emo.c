@@ -47,8 +47,7 @@ reprint:
 
     int selection = -1;
     if (!strcmp(argv[1], "random")) {
-        char c;
-        int newlines = 0;
+        int c, newlines = 0;
         while ((c = fgetc(fh)) != EOF)
             if (c == '\n')
                 newlines++;
