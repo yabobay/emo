@@ -57,7 +57,7 @@ reprint:
         fseek(fh, 0, SEEK_SET);
     }
 
-    char *line = NULL, *word, *filename;
+    char *line = NULL, *filename = NULL, *word;
     size_t line_size = 0;
     int i = 0;
     while (i++, getline(&line, &line_size, fh) != -1) {
