@@ -47,7 +47,6 @@ int image_height(image img) {
 bool get_pixel(image img, int x, int y, struct color *col) {
     PixelInfo pix;
     GetOneVirtualPixelInfo(img->img, 0, x, y, &pix, e);
-    /* printf("R:%lf G:%lf B:%lf A:%lf\n", pix.red, pix.green, pix.blue, pix.alpha); */
     col->r = pix.red / 65535 * 255;
     col->g = pix.green / 65535 * 255;
     col->b = pix.blue / 65535 * 255;

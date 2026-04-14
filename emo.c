@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <errno.h>
 
 #include "image.h"
 
@@ -20,8 +21,15 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    chdir(EMOJI_DIR);
+    if (chdir(EMOJI_DIR) == -1) {
+        puts("Sorry, the emoji dir needs to be placed in your working directory.");
+        return 1;
+    }
     FILE *fh = fopen("LIST_OF_EMOJI.txt", "r");
+    if (fh == NULL) {
+        printf("Error reading emoji list: %s\n", strerror(errno));
+        return 1;
+    }
 
     int selection = -1;
     if (!strcmp(argv[1], "random")) {
