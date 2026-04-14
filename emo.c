@@ -7,8 +7,6 @@
 
 #include "image.h"
 
-#define EMOJI_DIR "SerenityOS-RGI-emoji/"
-
 void output_color_to_terminal(struct color, struct color);
 void dump_image_to_terminal(image);
 bool string_starts_with(const char*, const char*);
@@ -21,8 +19,24 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    if (chdir(EMOJI_DIR) == -1) {
-        puts("Sorry, the emoji dir needs to be placed in your working directory.");
+    int dir_size = 50;
+    char *dir = malloc(dir_size * sizeof(char));
+reprint:
+    int new_size = snprintf(dir, dir_size, "%s/.local/share/emo", getenv("HOME"));
+    if (new_size > dir_size) {
+        dir_size = new_size;
+        dir = realloc(dir, new_size * sizeof(char));
+        goto reprint;
+    }
+
+    if (chdir(dir) == -1) {
+        // TODO: make the directory if errno == ENOENT
+        printf("Error changing directory to %s: %s\n", dir, strerror(errno));
+        return 1;
+    }
+
+    if (chdir("emoji") == -1) {
+        printf("No 'emoji' directory found at %s.\n", dir);
         return 1;
     }
     FILE *fh = fopen("LIST_OF_EMOJI.txt", "r");
