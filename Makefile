@@ -1,10 +1,7 @@
 all: emo
 
-MAGICK_CFLAGS=$(shell MagickWand-config --cflags)
-MAGICK_LDFLAGS=$(shell MagickWand-config --libs --ldflags)
-
-MAGICK_CFLAGS=$(shell MagickCore-config --cflags)
-MAGICK_LDFLAGS=$(shell MagickCore-config --libs --ldflags)
+MAGICK_CFLAGS=$(shell pkg-config MagickCore --cflags)
+MAGICK_LDFLAGS=$(shell pkg-config MagickCore --libs)
 
 emo: emo.o image.o
 	gcc emo.o image.o -o emo $(MAGICK_LDFLAGS) $(CFLAGS)
