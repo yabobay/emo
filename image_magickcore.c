@@ -1,7 +1,8 @@
 #include "image.h"
-#include <stdio.h>
+
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include <MagickCore/MagickCore.h>
 
@@ -19,12 +20,32 @@ void image_init() {
 
 void image_fini() {}
 
-int load_image(image *img, const char *filename) {
+int load_image_from_filename(image *img, const char *filename) {
     *img = malloc(sizeof(struct image));
     (*img)->img_info = CloneImageInfo((ImageInfo*) NULL);
     strcpy((*img)->img_info->filename, filename);
     (*img)->img = ReadImage((*img)->img_info, e);
     CatchException(e);
+    return 0;
+}
+
+// TODO: what does CatchException do
+
+int load_image_from_file_handle(image *img, FILE *fh) {
+    assert(fh);
+    fseek(fh, 0L, SEEK_END);
+    size_t size = ftell(fh);
+    rewind(fh);
+    char *blob = malloc(size);
+    fread(blob, size, 1, fh);
+
+    *img = malloc(sizeof(struct image));
+    (*img)->img_info = CloneImageInfo((ImageInfo*) NULL);
+    (*img)->img = BlobToImage((*img)->img_info, blob, size, e);
+    CatchException(e);
+
+    free(blob);
+    rewind(fh);
     return 0;
 }
 
@@ -48,6 +69,7 @@ int image_height(image img) {
 bool get_pixel(image img, int x, int y, struct color *col) {
     PixelInfo pix;
     GetOneVirtualPixelInfo(img->img, 0, x, y, &pix, e);
+    CatchException(e);
     col->r = pix.red / 65535 * 255;
     col->g = pix.green / 65535 * 255;
     col->b = pix.blue / 65535 * 255;

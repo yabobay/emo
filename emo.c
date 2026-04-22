@@ -1,36 +1,54 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include <unistd.h>
-#include <time.h>
 #include <errno.h>
 
+#include <unicode/utf8.h>
+
 #include "image.h"
+
+#define BORK(filename) {\
+            printf("Couldn't open file %s: %s\n", filename, strerror(errno));\
+            exit(1);\
+        }
+
+#define TRY_TO_PRINT_EMOJI(filename, nope_zone) {\
+    fh = fopen(filename, "rb");\
+    if (!fh) {\
+        if (errno == ENOENT)\
+            /* TODO: if it is emoji, say that there's no image for that emoji */ \
+            goto nope_zone;\
+        BORK(filename);\
+    }\
+    load_image_from_file_handle(&img, fh);\
+    fclose(fh);\
+    dump_image_to_terminal(img);\
+}
 
 void output_color_to_terminal(struct color, struct color);
 void dump_image_to_terminal(image);
 bool string_starts_with(const char*, const char*);
-void load_and_print_image(const char*);
+char *guess_filename(const uint8_t *s);
 
 int main(int argc, char **argv) {
     if (argc != 2) {
     usage:
-        puts("Usage: emo [🙂|random]");
+        puts("Usage: emo [🙂|hex]");
         return 0;
     }
 
     int dir_size = 50;
     char *dir = malloc(dir_size * sizeof(char));
-reprint:
-    int new_size = snprintf(dir, dir_size, "%s/.local/share/emo", getenv("HOME"));
+    int new_size = snprintf(dir, dir_size, "%s/.local/share/emo", getenv("HOME")) + 1;
     if (new_size > dir_size) {
-        dir_size = new_size;
         dir = realloc(dir, new_size * sizeof(char));
-        goto reprint;
+        snprintf(dir, new_size, "%s/.local/share/emo", getenv("HOME"));
     }
 
     if (chdir(dir) == -1) {
-        // TODO: make the directory if errno == ENOENT
+        // TODO: create the directory if errno == ENOENT
         printf("Error changing directory to %s: %s\n", dir, strerror(errno));
         return 1;
     }
@@ -39,45 +57,72 @@ reprint:
         printf("No 'emoji' directory found at %s.\n", dir);
         return 1;
     }
-    FILE *fh = fopen("LIST_OF_EMOJI.txt", "r");
-    if (fh == NULL) {
-        printf("Error reading emoji list: %s\n", strerror(errno));
-        return 1;
-    }
 
-    int selection = -1;
-    if (!strcmp(argv[1], "random")) {
-        int c, newlines = 0;
-        while ((c = fgetc(fh)) != EOF)
-            if (c == '\n')
-                newlines++;
-        srand(time(NULL) + clock());
-        selection = rand() % newlines;
-        fseek(fh, 0, SEEK_SET);
-    }
+    image_init();
+    image img = NULL;
+    char *filename = NULL;
+    FILE *fh = NULL;
 
-    char *line = NULL, *filename = NULL, *word;
-    size_t line_size = 0;
-    int i = 0;
-    while (i++, getline(&line, &line_size, fh) != -1) {
-        if (i == selection || string_starts_with(line, argv[1])) {
-            word = strtok(line, " ");
-            while (word) {
-                filename = word;
-                word = strtok(NULL, " ");
-            }
-            filename[strlen(filename)-2] = '\0';
-            break;
-        }
-    }
+    // Maybe it's an emoji:
 
-    if (!filename)
-        goto usage;
+    filename = guess_filename(argv[1]);
+    TRY_TO_PRINT_EMOJI(filename, not_emoji);
+    goto cleanup;
 
-    load_and_print_image(filename);
-    free(line);
-    fclose(fh);
+not_emoji:
+    // Maybe it's a hex code:
+
+    UChar32 hex;
+    hex = strtol(argv[1], NULL, 16);
+    if (!hex)
+        goto not_hex;
+    filename = malloc(25); // ¯\_(ツ)_/¯
+    sprintf(filename, "U+%04X.png", hex);
+    TRY_TO_PRINT_EMOJI(filename, not_hex);
+    goto cleanup;
+
+not_hex:
+    goto usage;
+
+cleanup:
+    unload_image(&img);
+    image_fini();
+    if (filename)
+        free(filename);
     return 0;
+}
+
+// requires heap string
+void strappend(char **str, size_t *size, const char *format, ...) {
+    va_list args, backup_args;
+    va_start(args, format);
+    va_copy(backup_args, args);
+    int len = strlen(*str);
+    int written = vsnprintf(*str + len, *size + 1 - len, format, args);
+    if (written > *size - len) {
+        *size += written + 1;
+        *str = realloc(*str, sizeof(char) * *size);
+        vsnprintf(*str + len, *size + 1 - len, format, backup_args);
+    }
+    va_end(args);
+    va_end(backup_args);
+}
+
+char *guess_filename(const uint8_t *s) {
+    char *filename = strdup("");
+    size_t flen = 0;
+    int32_t i = 0, length = strlen(s);
+    UChar32 c;
+    while (true) {
+        U8_GET(s, 0, i, length, c);
+        if (!c) break;
+        if (i > 0)
+            strappend(&filename, &flen, "_");
+        strappend(&filename, &flen, "U+%04X", c);
+        U8_FWD_1(s, i, length);
+    }
+    strappend(&filename, &flen, ".png");
+    return filename;
 }
 
 void output_color_to_terminal(struct color top, struct color bottom) {
@@ -112,13 +157,4 @@ bool string_starts_with(const char *a, const char *b) {
         if (a[i] != b[i])
             return false;
     return true;
-}
-
-void load_and_print_image(const char *filename) {
-    image_init();
-    image img;
-    load_image(&img, filename);
-    dump_image_to_terminal(img);
-    unload_image(&img);
-    image_fini();
 }
