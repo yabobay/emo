@@ -11,5 +11,5 @@ You need to download the [SerenityOS emojis](https://emoji.serenityos.org/) and 
 ## TODO's
 
 - Downloading the emojis from the internet and delicately placing them in `~/.local/share/emo` for you
-- Being able to specify an emoji by the emoji itself, its name, or its codepoint
-- The --flag flag: a flag that only shows flags
+- Being able to specify an emoji by its name
+- The `--flag` flag: a flag that only shows flags
