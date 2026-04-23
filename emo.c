@@ -4,13 +4,15 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <errno.h>
+#include <dirent.h>
+#include <time.h>
 
 #include <unicode/utf8.h>
 
 #include "image.h"
 
 #define BORK(filename) {\
-            printf("Couldn't open file %s: %s\n", filename, strerror(errno));\
+            printf("Couldn't open %s: %s\n", filename, strerror(errno));\
             exit(1);\
         }
 
@@ -35,7 +37,7 @@ char *guess_filename(const uint8_t *s);
 int main(int argc, char **argv) {
     if (argc != 2) {
     usage:
-        puts("Usage: emo [🙂|hex]");
+        puts("Usage: emo [🙂|hex|random]");
         return 0;
     }
 
@@ -62,6 +64,55 @@ int main(int argc, char **argv) {
     image img = NULL;
     char *filename = NULL;
     FILE *fh = NULL;
+
+    if (!strcmp(argv[1], "hex")) {
+        puts("No you dummy! Like, type in the hex code of the emoji! 🤦‍♀️");
+        goto cleanup;
+    } else if (!strcmp(argv[1], "random")) {
+        char *cwd = alloca(100);
+        if (!getcwd(cwd, 100)) {
+            puts(strerror(errno));
+            return 1;
+        }
+
+        DIR *dir = opendir(cwd);
+        if (!dir)
+            BORK(cwd);
+
+        struct dirent *d;
+        int nfiles = 0;
+        while (errno = 0, d = readdir(dir)) {
+            if (d->d_type != DT_UNKNOWN && d->d_type != DT_REG)
+                continue;
+            ++nfiles;
+        }
+        if (errno) {
+            puts(strerror(errno));
+            return 1;
+        }
+
+        srand(time(NULL) + clock());
+        int selection = rand() % nfiles;
+
+        rewinddir(dir);
+        int i = 0;
+        while (errno = 0, d = readdir(dir)) {
+            if (d->d_type != DT_UNKNOWN && d->d_type != DT_REG)
+                continue;
+            if (i++ == selection)
+                break;
+        }
+        if (errno) {
+            puts(strerror(errno));
+            return 1;
+        }
+
+        load_image_from_filename(&img, d->d_name);
+        dump_image_to_terminal(img);
+
+        closedir(dir);
+        goto cleanup;
+    }
 
     // Maybe it's an emoji:
 
