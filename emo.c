@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <dirent.h>
 #include <time.h>
+#include <assert.h>
 
 #include <unicode/utf8.h>
 
@@ -93,6 +94,7 @@ int main(int argc, char **argv) {
 
         srand(time(NULL) + clock());
         int selection = rand() % nfiles;
+        int original_selection = selection;
 
         rewinddir(dir);
         int i = 0;
@@ -107,8 +109,17 @@ int main(int argc, char **argv) {
             return 1;
         }
 
-        load_image_from_filename(&img, d->d_name);
-        dump_image_to_terminal(img);
+        IMAGE_ERROR ie = load_image_from_filename(&img, d->d_name);
+        switch (ie) {
+        case COOL:
+            dump_image_to_terminal(img);
+            break;
+        case THAT_WASNT_AN_IMAGE:
+            printf("File \"%s\" in the emoji directory isn't an image!\n", d->d_name);
+            break;
+        default:
+            printf("Uh-oh, error #%d :(\n", ie);
+        }
 
         closedir(dir);
         goto cleanup;
@@ -189,6 +200,7 @@ void output_color_to_terminal(struct color top, struct color bottom) {
 }
 
 void dump_image_to_terminal(image img) {
+    assert(img != NULL);
     for (int y = 0; y < image_height(img)-1; y += 2) {
         for (int x = 0; x < image_width(img); x++) {
             struct color col1, col2;

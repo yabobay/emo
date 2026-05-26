@@ -14,24 +14,23 @@ typedef struct image {
 ExceptionInfo *e;
 
 void image_init() {
-    // TODO: actually check this thing
     e = AcquireExceptionInfo();
 }
 
 void image_fini() {}
 
-int load_image_from_filename(image *img, const char *filename) {
+IMAGE_ERROR load_image_from_filename(image *img, const char *filename) {
     *img = malloc(sizeof(struct image));
     (*img)->img_info = CloneImageInfo((ImageInfo*) NULL);
     strcpy((*img)->img_info->filename, filename);
     (*img)->img = ReadImage((*img)->img_info, e);
+    if (e->severity == CorruptImageError)
+        return THAT_WASNT_AN_IMAGE;
     CatchException(e);
-    return 0;
+    return COOL;
 }
 
-// TODO: what does CatchException do
-
-int load_image_from_file_handle(image *img, FILE *fh) {
+IMAGE_ERROR load_image_from_file_handle(image *img, FILE *fh) {
     assert(fh);
     fseek(fh, 0L, SEEK_END);
     size_t size = ftell(fh);
@@ -46,12 +45,13 @@ int load_image_from_file_handle(image *img, FILE *fh) {
 
     free(blob);
     rewind(fh);
-    return 0;
+    return COOL;
 }
 
 void unload_image(image *img) {
     if (*img != NULL) {
-        DestroyImage((*img)->img);
+        if ((*img)->img != NULL)
+            DestroyImage((*img)->img);
         DestroyImageInfo((*img)->img_info);
         free(*img);
         *img = NULL;

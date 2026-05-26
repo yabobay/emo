@@ -6,7 +6,7 @@ Shows you pixelated emojis in the terminal!
 
 ## Setup
 
-You need to download the [SerenityOS emojis](https://emoji.serenityos.org/) and unzip the file into `~/.local/share/emo`, renaming the subdirectory that is created to `emoji`.
+Download the [SerenityOS emojis](https://emoji.serenityos.org/) and place all of them in `~/.local/share/emo`. The directory should only contain images.
 
 ## TODO's
 

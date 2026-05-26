@@ -10,8 +10,10 @@ struct color { unsigned char r, g, b, a; };
 
 typedef struct image *image;
 
-int load_image_from_filename(image *img, const char *filename);
-int load_image_from_file_handle(image *img, FILE *fh);
+typedef enum IMAGE_ERROR { COOL, THAT_WASNT_AN_IMAGE } IMAGE_ERROR;
+
+IMAGE_ERROR load_image_from_filename(image *img, const char *filename);
+IMAGE_ERROR load_image_from_file_handle(image *img, FILE *fh);
 void unload_image(image *img);
 
 int image_width(image img);
